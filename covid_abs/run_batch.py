@@ -2,6 +2,7 @@ from covid_abs.graphics import *
 from covid_abs.network.graph_abs import *
 from covid_abs.network.util import *
 import numpy as np
+import networkx as nx
 
 
 global_parameters = dict(

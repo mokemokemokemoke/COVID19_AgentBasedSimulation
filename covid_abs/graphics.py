@@ -5,7 +5,7 @@ Auxiliary methods for plotting the simulations
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import networkx as nx
 from covid_abs.common import *
 from covid_abs.agents import *
 from covid_abs.abs import *
