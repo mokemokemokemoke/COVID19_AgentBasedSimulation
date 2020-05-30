@@ -32,6 +32,8 @@ def color1(s):
         return 'black'
     elif s == 'Hospitalization':
         return 'orange'
+    elif s == 'Incubation':
+        return 'yellow'
     elif s == 'Severe':
         return 'red'
     else:
@@ -47,12 +49,15 @@ def color2(agent):
             return 'darkgray'
         elif agent.infected_status == InfectionSeverity.Hospitalization:
             return 'orange'
+        elif agent.infected_status == InfectionSeverity.Incubation:
+            return 'yellow'
         else:
             return 'red'
     elif agent.status == Status.Recovered_Immune:
         return 'green'
     elif agent.status == Status.Death:
         return 'black'
+
 
 
 def color3(a):
@@ -73,16 +78,17 @@ def color3(a):
         return 'sienna'
 
 
-def update_statistics(sim, statistics):
+def update_statistics(sim, statistics, third_plot):
     """Store the iteration statistics"""
 
     stats1 = sim.get_statistics(kind='info')
     statistics['info'].append(stats1)
     df1 = pd.DataFrame(statistics['info'], columns=[k for k in stats1.keys()])
 
-    stats2 = sim.get_statistics(kind='ecom')
-    statistics['ecom'].append(stats2)
-    df2 = pd.DataFrame(statistics['ecom'], columns=[k for k in stats2.keys()])
+
+    stats2 = sim.get_statistics(kind=third_plot)
+    statistics[third_plot].append(stats2)
+    df2 = pd.DataFrame(statistics[third_plot], columns=[k for k in stats2.keys()])
 
     return (df1, df2)
 
@@ -110,7 +116,7 @@ def clear(scat, linhas1, linhas2):
     return tuple(ret)
 
 
-def update(sim, scat, linhas1, linhas2, statistics):
+def update(sim, scat, linhas1, linhas2, statistics, third_plot):
     """
     Execute an iteration of the simulation and update the animation graphics
 
@@ -125,13 +131,13 @@ def update(sim, scat, linhas1, linhas2, statistics):
     scat.set_facecolor([color2(a) for a in sim.get_population()])
     scat.set_offsets(sim.get_positions())
 
-    df1, df2 = update_statistics(sim, statistics)
-
+    df1, df2 = update_statistics(sim, statistics, third_plot)
     for col in linhas1.keys():
         linhas1[col].set_data(df1.index.values, df1[col].values)
 
     for col in linhas2.keys():
         linhas2[col].set_data(df2.index.values, df2[col].values)
+
 
     ret = [scat]
     for l in linhas1.values():
@@ -151,7 +157,8 @@ def execute_simulation(sim, **kwargs):
     :param  iteration_time: time (in miliseconds) between each iteration
     :return: an animation object
     """
-    statistics = {'info': [], 'ecom': []}
+    third_plot = kwargs.get('third_plot', 'ecom')
+    statistics = {'info': [], third_plot: []}
 
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[20, 5])
     # plt.close()
@@ -170,7 +177,7 @@ def execute_simulation(sim, **kwargs):
     scat = ax[0].scatter(pos[:, 0], pos[:, 1],
                          c=[color2(a) for a in sim.get_population()])
 
-    df1, df2 = update_statistics(sim, statistics)
+    df1, df2 = update_statistics(sim, statistics, third_plot)
 
     ax[1].set_title('Contagion Evolution')
     ax[1].set_xlim((0, frames))
@@ -187,23 +194,40 @@ def execute_simulation(sim, **kwargs):
     ax[1].set_ylabel("% of Population")
 
     handles, labels = ax[1].get_legend_handles_labels()
-    lgd = ax[1].legend(handles, labels, loc='top right') #2, bbox_to_anchor=(0, 0))
+    lgd = ax[1].legend(handles, labels, loc='upper right') #2, bbox_to_anchor=(0, 0))
 
-    linhas2 = {}
 
-    ax[2].set_title('Economical Impact')
-    ax[2].set_xlim((0, frames))
+    if third_plot=='ecom':
+        linhas2 = {}
 
-    for col in df2.columns.values:
-        linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
+        ax[2].set_title('Economical Impact')
+        ax[2].set_xlim((0, frames))
 
-    ax[2].set_xlabel("Nº of Days")
-    ax[2].set_ylabel("Wealth")
+        for col in df2.columns.values:
 
-    handles, labels = ax[2].get_legend_handles_labels()
-    lgd = ax[2].legend(handles, labels, loc='top right') #2, bbox_to_anchor=(1, 1))
+            linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
 
-    animate = lambda i: update(sim, scat, linhas1, linhas2, statistics)
+        ax[2].set_xlabel("Nº of Days")
+        ax[2].set_ylabel("Wealth")
+
+        handles, labels = ax[2].get_legend_handles_labels()
+        lgd = ax[2].legend(handles, labels, loc='upper right') #2, bbox_to_anchor=(1, 1))
+    elif third_plot=='R':
+        linhas2 = {}
+
+        ax[2].set_title('Average effective Reproduction Number')
+        ax[2].set_xlim((0, frames))
+        ax[2].set_ylim((0, 3))
+
+        for col in df2.columns.values:
+            linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c="c", label='R-Value')
+
+        ax[2].set_xlabel("Nº of Days")
+        ax[2].set_ylabel("R")
+
+        handles, labels = ax[2].get_legend_handles_labels()
+        lgd = ax[2].legend(handles, labels, loc='upper right')  # 2, bbox_to_anchor=(1, 1))
+    animate = lambda i: update(sim, scat, linhas1, linhas2, statistics, third_plot)
 
     init = lambda: clear(scat, linhas1, linhas2)
 

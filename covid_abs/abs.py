@@ -47,6 +47,10 @@ class Simulation(object):
         "A dictionary with conditional changes in the Agent attributes"
 
         self.total_wealth = kwargs.get("total_wealth", 10 ** 4)
+        self.incubation_time = kwargs.get("incubation_time", 5)
+        self.infection_duration = kwargs.get("infection_duration", 20)
+        '''Number of people infected on this day'''
+        self.inf_new_day = 0
 
     def _xclip(self, x):
         return np.clip(int(x), 0, self.length)
@@ -146,14 +150,16 @@ class Simulation(object):
         :param agent2: an instance of agents.Agent
         """
 
-        if agent1.status == Status.Susceptible and agent2.status == Status.Infected:
+        if (agent1.status == Status.Susceptible and agent2.status == Status.Infected and agent2.infected_status != InfectionSeverity.Incubation):
             contagion_test = np.random.random()
             agent1.infection_status = InfectionSeverity.Exposed
             if contagion_test <= self.contagion_rate:
                 agent1.status = Status.Infected
-                agent1.infection_status = InfectionSeverity.Asymptomatic
+                agent1.infection_status = InfectionSeverity.Incubation
+                # counter for infection
+                self.inf_new_day += 1
 
-    def move(self, agent, triggers=[]):
+    def move(self, agent, triggers=None):
         """
         Performs the actions related with the movement of the agents in the shared environment
 
@@ -161,6 +167,8 @@ class Simulation(object):
         :param triggers: the list of population triggers related to the movement
         """
 
+        if triggers is None:
+            triggers = []
         if agent.status == Status.Death or (agent.status == Status.Infected
                                             and (agent.infected_status == InfectionSeverity.Hospitalization
                                                  or agent.infected_status == InfectionSeverity.Severe)):
@@ -205,7 +213,10 @@ class Simulation(object):
 
             teste_sub = np.random.random()
 
-            if agent.infected_status == InfectionSeverity.Asymptomatic:
+            if agent.infected_status == InfectionSeverity.Incubation:
+                if agent.infected_time > self.infection_duration:
+                    agent.infected_status = InfectionSeverity.Asymptomatic
+            elif agent.infected_status == InfectionSeverity.Asymptomatic:
                 if age_hospitalization_probs[indice] > teste_sub:
                     agent.infected_status = InfectionSeverity.Hospitalization
             elif agent.infected_status == InfectionSeverity.Hospitalization:
@@ -222,12 +233,13 @@ class Simulation(object):
                 agent.infected_status = InfectionSeverity.Asymptomatic
                 return
 
-            if agent.infected_time > 20:
+            if agent.infected_time > self.infection_duration:
                 agent.infected_time = 0
                 agent.status = Status.Recovered_Immune
                 agent.infected_status = InfectionSeverity.Asymptomatic
 
         agent.wealth -= self.minimum_expense * basic_income[agent.social_stratum]
+
 
     def execute(self):
         """
@@ -295,29 +307,39 @@ class Simulation(object):
         :param kind: 'info' for health statiscs, 'ecom' for economic statistics and None for all statistics
         :return: a dictionary
         """
+
         if self.statistics is None:
             self.statistics = {}
             for status in Status:
-                self.statistics[status.name] = np.sum(
-                    [1 for a in self.population if a.status == status]) / self.population_size
+                tmp = np.sum([1 for a in self.population if a.status == status])
+                if status.name == 'Infected':
+                    curr_inf = tmp
+                self.statistics[status.name] = tmp / self.population_size
 
             for infected_status in filter(lambda x: x != InfectionSeverity.Exposed, InfectionSeverity):
                 self.statistics[infected_status.name] = np.sum([1 for a in self.population if
-                                                                a.infected_status == infected_status and
-                                                                a.status != Status.Death]) / self.population_size
+                                                                a.infected_status == infected_status and a.status != Status.Death]) / self.population_size
 
+
+            if curr_inf != 0:
+                self.statistics['R'] = self.inf_new_day / curr_inf
+            else:
+                self.statistics['R'] = 0
             for quintile in [0, 1, 2, 3, 4]:
                 self.statistics['Q{}'.format(quintile + 1)] = np.sum(
                     [a.wealth for a in self.population if a.social_stratum == quintile
                      and a.age >= 18 and a.status != Status.Death])
-
+        self.inf_new_day = 0
         return self.filter_stats(kind)
 
     def filter_stats(self, kind):
         if kind == 'info':
-            return {k: v for k, v in self.statistics.items() if not k.startswith('Q') and k not in ('Business','Government')}
+            return {k: v for k, v in self.statistics.items() if
+                    not k.startswith('Q') and k != 'R'  and k not in ('Business', 'Government')}
         elif kind == 'ecom':
-            return {k: v for k, v in self.statistics.items() if k.startswith('Q') or k in ('Business','Government')}
+            return {k: v for k, v in self.statistics.items() if k.startswith('Q') or k in ('Business', 'Government')}
+        elif kind == 'R':
+            return {k: v for k, v in self.statistics.items() if k == 'R'}
         else:
             return self.statistics
 

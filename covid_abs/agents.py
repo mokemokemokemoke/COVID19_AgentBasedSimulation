@@ -24,6 +24,7 @@ class InfectionSeverity(Enum):
     Asymptomatic = 'a'
     Hospitalization = 'h'
     Severe = 'g'
+    Incubation = 'i'
 
 
 class AgentType(Enum):
@@ -62,6 +63,9 @@ class Agent(object):
         self.type = AgentType.Person
         """The type of the agent"""
         self.environment = kwargs.get('environment', None)
+
+        self.x_infected = 0
+        """The ampunt of agents this agent infected"""
 
     def get_description(self):
         """
