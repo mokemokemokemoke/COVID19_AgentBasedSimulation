@@ -24,7 +24,7 @@ sim = Simulation(
         }
 )
 
-anim = execute_simulation(sim, iterations=80, third_plot='R')
+anim = execute_simulation(sim, iterations=80, third_plot='R', fps=60)
 
 
 #rc('animation', html='jshtml')

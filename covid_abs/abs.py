@@ -152,10 +152,10 @@ class Simulation(object):
 
         if (agent1.status == Status.Susceptible and agent2.status == Status.Infected and agent2.infected_status != InfectionSeverity.Incubation):
             contagion_test = np.random.random()
-            agent1.infection_status = InfectionSeverity.Exposed
+            agent1.infected_status = InfectionSeverity.Exposed
             if contagion_test <= self.contagion_rate:
                 agent1.status = Status.Infected
-                agent1.infection_status = InfectionSeverity.Incubation
+                agent1.infected_status = InfectionSeverity.Incubation
                 # counter for infection
                 self.inf_new_day += 1
 
@@ -214,7 +214,7 @@ class Simulation(object):
             teste_sub = np.random.random()
 
             if agent.infected_status == InfectionSeverity.Incubation:
-                if agent.infected_time > self.infection_duration:
+                if agent.infected_time > self.incubation_time:
                     agent.infected_status = InfectionSeverity.Asymptomatic
             elif agent.infected_status == InfectionSeverity.Asymptomatic:
                 if age_hospitalization_probs[indice] > teste_sub:
@@ -317,12 +317,16 @@ class Simulation(object):
                 self.statistics[status.name] = tmp / self.population_size
 
             for infected_status in filter(lambda x: x != InfectionSeverity.Exposed, InfectionSeverity):
+                if(infected_status == InfectionSeverity.Incubation):
+                    print( np.sum([1 for a in self.population if
+                                                                a.infected_status == infected_status and a.status != Status.Death]) )
                 self.statistics[infected_status.name] = np.sum([1 for a in self.population if
                                                                 a.infected_status == infected_status and a.status != Status.Death]) / self.population_size
 
-
+            print('curr_inf ', curr_inf)
+            print('inf this day ', self.inf_new_day)
             if curr_inf != 0:
-                self.statistics['R'] = self.inf_new_day / curr_inf
+                self.statistics['R'] = self.inf_new_day / (curr_inf-self.inf_new_day)
             else:
                 self.statistics['R'] = 0
             for quintile in [0, 1, 2, 3, 4]:
