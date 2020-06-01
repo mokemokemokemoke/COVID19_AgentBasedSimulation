@@ -35,11 +35,11 @@ def Lockdown() -> Simulation:
         # Percentage of immune in initial population
         initial_immune_perc=0.01,
         # Length of simulation environment
-        length=1000,
+        length=100,
         # Height of simulation environment
-        height=1000,
+        height=100,
         # Size of population
-        population_size=2438,
+        population_size=80,
         # Minimal distance between agents for contagion
         contagion_distance=5.,
         # Maximum percentage of population which Healthcare System can handle simutaneously

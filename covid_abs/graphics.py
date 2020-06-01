@@ -162,7 +162,7 @@ def execute_simulation(sim, **kwargs):
 
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[20, 5])
     # plt.close()
-    fig.suptitle(fig_tit)
+    fig.suptitle(fig_tit, fontsize=16)
     frames = kwargs.get('iterations', 100)
     iteration_time = kwargs.get('iteration_time', 250)
 
