@@ -138,13 +138,11 @@ def update(sim, scat, linhas1, linhas2, statistics, third_plot):
     for col in linhas2.keys():
         linhas2[col].set_data(df2.index.values, df2[col].values)
 
-
     ret = [scat]
     for l in linhas1.values():
         ret.append(l)
     for l in linhas2.values():
         ret.append(l)
-
     return tuple(ret)
 
 
@@ -158,11 +156,13 @@ def execute_simulation(sim, **kwargs):
     :return: an animation object
     """
     third_plot = kwargs.get('third_plot', 'ecom')
+    fig_tit = kwargs.get('fig_tit', 'Simulation Plot')
+
     statistics = {'info': [], third_plot: []}
 
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[20, 5])
     # plt.close()
-
+    fig.suptitle(fig_tit)
     frames = kwargs.get('iterations', 100)
     iteration_time = kwargs.get('iteration_time', 250)
 
@@ -174,7 +174,7 @@ def execute_simulation(sim, **kwargs):
 
     pos = np.array(sim.get_positions())
 
-    scat = ax[0].scatter(pos[:, 0], pos[:, 1],
+    scat = ax[0].scatter(pos[:, 0], pos[:, 1], s= 0.5,
                          c=[color2(a) for a in sim.get_population()])
 
     df1, df2 = update_statistics(sim, statistics, third_plot)
@@ -204,8 +204,7 @@ def execute_simulation(sim, **kwargs):
         ax[2].set_xlim((0, frames))
 
         for col in df2.columns.values:
-
-            linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
+            linhas2[col],  = ax[2].plot(df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
 
         ax[2].set_xlabel("Nº of Days")
         ax[2].set_ylabel("Wealth")

@@ -51,6 +51,7 @@ class Simulation(object):
         self.infection_duration = kwargs.get("infection_duration", 20)
         '''Number of people infected on this day'''
         self.inf_new_day = 0
+        self.rec_new_day = 0
 
     def _xclip(self, x):
         return np.clip(int(x), 0, self.length)
@@ -314,19 +315,21 @@ class Simulation(object):
                 tmp = np.sum([1 for a in self.population if a.status == status])
                 if status.name == 'Infected':
                     curr_inf = tmp
+                if status.name == 'Recovered_Immune':
+                    curr_rec = tmp
                 self.statistics[status.name] = tmp / self.population_size
 
             for infected_status in filter(lambda x: x != InfectionSeverity.Exposed, InfectionSeverity):
-                if(infected_status == InfectionSeverity.Incubation):
-                    print( np.sum([1 for a in self.population if
-                                                                a.infected_status == infected_status and a.status != Status.Death]) )
+                # if(infected_status == InfectionSeverity.Incubation):
+                   # print( np.sum([1 for a in self.population if a.infected_status == infected_status and a.status != Status.Death]) )
                 self.statistics[infected_status.name] = np.sum([1 for a in self.population if
                                                                 a.infected_status == infected_status and a.status != Status.Death]) / self.population_size
 
-            print('curr_inf ', curr_inf)
-            print('inf this day ', self.inf_new_day)
-            if curr_inf != 0:
-                self.statistics['R'] = self.inf_new_day / (curr_inf-self.inf_new_day)
+            if curr_inf != 0 and curr_rec != 0:
+                self.statistics['R'] = (self.inf_new_day / (curr_inf-self.inf_new_day)/curr_inf)
+            elif curr_rec == 0 and curr_inf != 0:
+                self.statistics['R'] = self.inf_new_day / (curr_inf - self.inf_new_day)
+
             else:
                 self.statistics['R'] = 0
             for quintile in [0, 1, 2, 3, 4]:
