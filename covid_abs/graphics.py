@@ -9,13 +9,15 @@ import networkx as nx
 from covid_abs.common import *
 from covid_abs.agents import *
 from covid_abs.abs import *
+import matplotlib.patches as patches
+from matplotlib.patches import Patch
 
 from matplotlib import animation, rc
 from IPython.display import HTML
 
 legend_ecom = {
     'Q1': 'Most Poor', 'Q2': 'Poor', 'Q3': 'Working Class',
-    'Q4': 'Rich', 'Q5': 'Most Rich', 'Business':'Business', 'Government':'Government'
+    'Q4': 'Rich', 'Q5': 'Most Rich', 'Business': 'Business', 'Government': 'Government'
 }
 """Legend for wealth distribution quintiles"""
 
@@ -59,7 +61,6 @@ def color2(agent):
         return 'black'
 
 
-
 def color3(a):
     """Plotting colors by wealth distribution quintiles"""
     if a == 'Q1':
@@ -85,10 +86,10 @@ def update_statistics(sim, statistics, third_plot):
     statistics['info'].append(stats1)
     df1 = pd.DataFrame(statistics['info'], columns=[k for k in stats1.keys()])
 
-
     stats2 = sim.get_statistics(kind=third_plot)
     statistics[third_plot].append(stats2)
-    df2 = pd.DataFrame(statistics[third_plot], columns=[k for k in stats2.keys()])
+    df2 = pd.DataFrame(statistics[third_plot], columns=[
+                       k for k in stats2.keys()])
 
     return (df1, df2)
 
@@ -138,7 +139,6 @@ def update(sim, scat, linhas1, linhas2, statistics, third_plot):
     for col in linhas2.keys():
         linhas2[col].set_data(df2.index.values, df2[col].values)
 
-
     ret = [scat]
     for l in linhas1.values():
         ret.append(l)
@@ -177,6 +177,21 @@ def execute_simulation(sim, **kwargs):
     scat = ax[0].scatter(pos[:, 0], pos[:, 1],
                          c=[color2(a) for a in sim.get_population()])
 
+    # show supermarket on the plot
+    supermarket = patches.Rectangle(
+        (sim.length/2-5, sim.height/2-5), 10, 10, linewidth=1, edgecolor='r', facecolor='none')
+    ax[0].add_patch(supermarket)
+
+    # show school on the plot
+    school = patches.Rectangle(
+        (sim.length-10, sim.height-10), 10, 10, linewidth=1, edgecolor='b', facecolor='none')
+    ax[0].add_patch(school)
+
+    # create legend for central locations
+    legend_elements = (Patch(facecolor='none', edgecolor='r', label='Supermarket'), Patch(
+        facecolor='none', edgecolor='b', label='School'),)
+    ax[0].legend(handles=legend_elements, loc='lower right')
+
     df1, df2 = update_statistics(sim, statistics, third_plot)
 
     ax[1].set_title('Contagion Evolution')
@@ -184,20 +199,22 @@ def execute_simulation(sim, **kwargs):
 
     linhas1 = {}
 
-    ax[1].axhline(y=sim.critical_limit, c="black", ls='--', label='Critical limit')
+    ax[1].axhline(y=sim.critical_limit, c="black",
+                  ls='--', label='Critical limit')
 
     for col in df1.columns.values:
         if col != 'Asymptomatic':
-            linhas1[col], = ax[1].plot(df1.index.values, df1[col].values, c=color1(col), label=col)
+            linhas1[col], = ax[1].plot(
+                df1.index.values, df1[col].values, c=color1(col), label=col)
 
     ax[1].set_xlabel("Nº of Days")
     ax[1].set_ylabel("% of Population")
 
     handles, labels = ax[1].get_legend_handles_labels()
-    lgd = ax[1].legend(handles, labels, loc='upper right') #2, bbox_to_anchor=(0, 0))
+    # 2, bbox_to_anchor=(0, 0))
+    lgd = ax[1].legend(handles, labels, loc='upper right')
 
-
-    if third_plot=='ecom':
+    if third_plot == 'ecom':
         linhas2 = {}
 
         ax[2].set_title('Economical Impact')
@@ -205,14 +222,16 @@ def execute_simulation(sim, **kwargs):
 
         for col in df2.columns.values:
 
-            linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
+            linhas2[col], = ax[2].plot(
+                df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
 
         ax[2].set_xlabel("Nº of Days")
         ax[2].set_ylabel("Wealth")
 
         handles, labels = ax[2].get_legend_handles_labels()
-        lgd = ax[2].legend(handles, labels, loc='upper right') #2, bbox_to_anchor=(1, 1))
-    elif third_plot=='R':
+        # 2, bbox_to_anchor=(1, 1))
+        lgd = ax[2].legend(handles, labels, loc='upper right')
+    elif third_plot == 'R':
         linhas2 = {}
 
         ax[2].set_title('Average effective Reproduction Number')
@@ -220,19 +239,24 @@ def execute_simulation(sim, **kwargs):
         ax[2].set_ylim((0, 3))
 
         for col in df2.columns.values:
-            linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c="c", label='R-Value')
+            linhas2[col], = ax[2].plot(
+                df2.index.values, df2[col].values, c="c", label='R-Value')
 
         ax[2].set_xlabel("Nº of Days")
         ax[2].set_ylabel("R")
 
         handles, labels = ax[2].get_legend_handles_labels()
-        lgd = ax[2].legend(handles, labels, loc='upper right')  # 2, bbox_to_anchor=(1, 1))
-    animate = lambda i: update(sim, scat, linhas1, linhas2, statistics, third_plot)
+        # 2, bbox_to_anchor=(1, 1))
+        lgd = ax[2].legend(handles, labels, loc='upper right')
 
-    init = lambda: clear(scat, linhas1, linhas2)
+    def animate(i): return update(sim, scat, linhas1,
+                                  linhas2, statistics, third_plot)
+
+    def init(): return clear(scat, linhas1, linhas2)
 
     # animation function. This is called sequentially
-    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=frames, interval=iteration_time, blit=True)
+    anim = animation.FuncAnimation(
+        fig, animate, init_func=init, frames=frames, interval=iteration_time, blit=True)
 
     return anim
 
@@ -326,7 +350,7 @@ def execute_graphsimulation(sim, **kwargs):
 
     tickslabels = [str(i//24) for i in range(0, frames, tick_unit)]
 
-    #print(ticks)
+    # print(ticks)
 
     ax[1].set_title('Contagion Evolution')
     ax[1].set_xlim((0, frames))
@@ -336,17 +360,20 @@ def execute_graphsimulation(sim, **kwargs):
 
     linhas1 = {}
 
-    ax[1].axhline(y=sim.critical_limit, c="black", ls='--', label='Critical limit')
+    ax[1].axhline(y=sim.critical_limit, c="black",
+                  ls='--', label='Critical limit')
 
     for col in df1.columns.values:
         if col != 'Asymptomatic':
-            linhas1[col], = ax[1].plot(df1.index.values, df1[col].values, c=color1(col), label=col)
+            linhas1[col], = ax[1].plot(
+                df1.index.values, df1[col].values, c=color1(col), label=col)
 
     ax[1].set_xlabel("Nº of Days")
     ax[1].set_ylabel("% of Population")
 
     handles, labels = ax[1].get_legend_handles_labels()
-    lgd = ax[1].legend(handles, labels, loc='top right')  # 2, bbox_to_anchor=(0, 0))
+    # 2, bbox_to_anchor=(0, 0))
+    lgd = ax[1].legend(handles, labels, loc='top right')
 
     linhas2 = {}
 
@@ -355,19 +382,22 @@ def execute_graphsimulation(sim, **kwargs):
     ax[2].xaxis.set_major_locator(MultipleLocator(tick_unit))
     ax[2].set_xticklabels(tickslabels)
 
-    #print(df2.columns.values)
+    # print(df2.columns.values)
     for col in df2.columns.values:
-        linhas2[col], = ax[2].plot(df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
+        linhas2[col], = ax[2].plot(
+            df2.index.values, df2[col].values, c=color3(col), label=legend_ecom[col])
 
     ax[2].set_xlabel("Nº of Days")
     ax[2].set_ylabel("Wealth")
 
     handles, labels = ax[2].get_legend_handles_labels()
-    lgd = ax[2].legend(handles, labels, loc='top right')  # 2, bbox_to_anchor=(1, 1))
+    # 2, bbox_to_anchor=(1, 1))
+    lgd = ax[2].legend(handles, labels, loc='top right')
 
-    animate = lambda i: update_graph(sim, ax[0], linhas1, ax[1], linhas2, ax[2], statistics)
+    def animate(i): return update_graph(
+        sim, ax[0], linhas1, ax[1], linhas2, ax[2], statistics)
 
-    init = lambda: clear_graph(ax[0], linhas1, linhas2)
+    def init(): return clear_graph(ax[0], linhas1, linhas2)
 
     # animation function. This is called sequentially
     anim = animation.FuncAnimation(fig, animate, init_func=init, frames=frames, interval=iteration_time, blit=True,
@@ -448,7 +478,8 @@ def draw_graph2(sim, ax=None, edges=False):
         G.add_node(person.id, type='person')
         col = color2(person)
         if col not in colors:
-            colors[col] = {'status': person.status, 'severity': person.infected_status, 'id':[]}
+            colors[col] = {'status': person.status,
+                           'severity': person.infected_status, 'id': []}
         colors[col]['id'].append(person.id)
         pos[person.id] = [person.x, person.y]
 
@@ -462,15 +493,16 @@ def draw_graph2(sim, ax=None, edges=False):
                 G.add_edge(bus.id, person.id)
 
     #nx.draw(G, ax=ax, pos=pos, node_color=colors, node_size=sizes)
-    nx.draw_networkx_nodes(G, pos=pos, nodelist=[sim.healthcare.id], node_color='darkseagreen', label='Hospital')
-    nx.draw_networkx_nodes(G, pos=pos, nodelist=houses, node_color='cyan', label='Houses')
-    nx.draw_networkx_nodes(G, pos=pos, nodelist=buss, node_color='darkviolet', label='Business')
+    nx.draw_networkx_nodes(G, pos=pos, nodelist=[
+                           sim.healthcare.id], node_color='darkseagreen', label='Hospital')
+    nx.draw_networkx_nodes(G, pos=pos, nodelist=houses,
+                           node_color='cyan', label='Houses')
+    nx.draw_networkx_nodes(G, pos=pos, nodelist=buss,
+                           node_color='darkviolet', label='Business')
     for key in colors.keys():
-        nx.draw_networkx_nodes(G, pos=pos, nodelist=[sim.healthcare.id], node_color='darkseagreen', label='Hospital')
-
+        nx.draw_networkx_nodes(G, pos=pos, nodelist=[
+                               sim.healthcare.id], node_color='darkseagreen', label='Hospital')
 
 
 def save_gif(anim, file, writer='imagemagick'):
     anim.save(file, writer='imagemagick', fps=60)
-
-
