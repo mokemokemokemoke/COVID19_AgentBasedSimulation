@@ -376,8 +376,7 @@ def execute_graphsimulation(sim, **kwargs):
 
 
 def draw_graph(sim, ax=None, edges=False):
-    import networkx as nx
-    from covid_abs.graphics import color2
+
     G = nx.Graph()
     colors = []
     pos = {}

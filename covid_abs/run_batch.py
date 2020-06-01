@@ -1,4 +1,3 @@
-from covid_abs.abs import *
 from covid_abs.graphics import *
 
 
@@ -35,11 +34,11 @@ def Lockdown() -> Simulation:
         # Percentage of immune in initial population
         initial_immune_perc=0.01,
         # Length of simulation environment
-        length=100,
+        length=1000,
         # Height of simulation environment
-        height=100,
+        height=1000,
         # Size of population
-        population_size=80,
+        population_size=2438,
         # Minimal distance between agents for contagion
         contagion_distance=5.,
         # Maximum percentage of population which Healthcare System can handle simutaneously
@@ -94,6 +93,7 @@ def Moderate_Reduction_in_Social_Contact() -> Simulation:
 
     return sim
 
+
 def Moderate_Reduction_in_Social_Contact_and_wearing_Masks() -> Simulation:
     sim = Simulation(
         # Percentage of infected in initial population
@@ -110,6 +110,7 @@ def Moderate_Reduction_in_Social_Contact_and_wearing_Masks() -> Simulation:
         contagion_distance=5.,
         # Maximum percentage of population which Healthcare System can handle simutaneously
         critical_limit=0.05,
+        contagion_rate =0.9*.16,
         # Mobility ranges for agents, by Status
         amplitudes={
             Status.Susceptible: 5,
@@ -133,10 +134,14 @@ def Moderate_Reduction_in_Social_Contact_and_wearing_Masks() -> Simulation:
         })
 
     return sim
-SCENARIOS = [No_Restriction, Lockdown, Moderate_Reduction_in_Social_Contact, Moderate_Reduction_in_Social_Contact_and_wearing_Masks]
+
+
+SCENARIOS = [No_Restriction, Lockdown, Moderate_Reduction_in_Social_Contact,
+             Moderate_Reduction_in_Social_Contact_and_wearing_Masks]
 
 for scen_func in SCENARIOS:
-    anim = execute_simulation(scen_func(), iterations=90, third_plot='R', fig_tit =f'{scen_func.__name__}'.replace('_', ' '))
+    anim = execute_simulation(scen_func(), iterations=90, third_plot='R',
+                              fig_tit=f'{scen_func.__name__}'.replace('_', ' '))
     print(f'{scen_func.__name__}')
     rc('animation', html='html5')
     save_gif(anim, f'{scen_func.__name__}.gif')
