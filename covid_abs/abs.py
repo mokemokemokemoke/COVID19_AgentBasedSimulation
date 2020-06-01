@@ -85,7 +85,8 @@ class Simulation(object):
         :param action: a lambda function that receives the current simulation instance and returns
         the new value of the attribute
         """
-        self.triggers_simulation.append({'condition': condition, 'attribute': attribute, 'action': action})
+        self.triggers_simulation.append(
+            {'condition': condition, 'attribute': attribute, 'action': action})
 
     def append_trigger_population(self, condition, attribute, action):
         """
@@ -96,11 +97,14 @@ class Simulation(object):
         :param action: a lambda function that receives the current agent instance and returns the new
         value of the attribute
         """
-        self.triggers_population.append({'condition': condition, 'attribute': attribute, 'action': action})
+        self.triggers_population.append(
+            {'condition': condition, 'attribute': attribute, 'action': action})
 
     def random_position(self):
-        x = self._xclip(self.length / 2 + (np.random.randn(1) * (self.length / 3)))
-        y = self._yclip(self.height / 2 + (np.random.randn(1) * (self.height / 3)))
+        x = self._xclip(self.length / 2 +
+                        (np.random.randn(1) * (self.length / 3)))
+        y = self._yclip(self.height / 2 +
+                        (np.random.randn(1) * (self.height / 3)))
 
         return x, y
 
@@ -115,7 +119,8 @@ class Simulation(object):
 
         age = int(np.random.beta(2, 5, 1) * 100)
         social_stratum = int(np.random.rand(1) * 100 // 20)
-        self.population.append(Agent(x=x, y=y, age=age, status=status, social_stratum=social_stratum))
+        self.population.append(
+            Agent(x=x, y=y, age=age, status=status, social_stratum=social_stratum))
 
     def initialize(self):
         """
@@ -137,7 +142,8 @@ class Simulation(object):
         # Share the common wealth of 10^4 among the population, according each agent social stratum
         for quintile in [0, 1, 2, 3, 4]:
             total = lorenz_curve[quintile] * self.total_wealth
-            qty = max(1.0, np.sum([1 for a in self.population if a.social_stratum == quintile and a.age >= 18]))
+            qty = max(1.0, np.sum(
+                [1 for a in self.population if a.social_stratum == quintile and a.age >= 18]))
             ag_share = total / qty
             for agent in filter(lambda x: x.social_stratum == quintile and x.age >= 18, self.population):
                 agent.wealth = ag_share
@@ -182,19 +188,46 @@ class Simulation(object):
         ix = int(np.random.randn(1) * self.amplitudes[agent.status])
         iy = int(np.random.randn(1) * self.amplitudes[agent.status])
 
-        if (agent.x + ix) <= 0 or (agent.x + ix) >= self.length:
-            agent.x -= ix
+        # agents between 6 and 18 go to school 5 days a week
+        if agent.age >= 6 and agent.age <= 18 and agent.school < 5:
+            agent.x = self.length-10 + np.random.randint(10)
+            agent.y = self.height-10 + np.random.randint(10)
+        elif agent.age >= 6 and agent.age <= 18 and agent.school == 5:
+            agent.x, agent.y = self.random_position()
+        # agents older than 18 years go to the supermarket at least once a week (every 7 days)
+        # the supermarket has size 10x10 and the agents get assigned to a random position within the supermarket
+        elif agent.supermarket == 6 and agent.age > 18:
+            agent.x = self.length/2-5 + np.random.randint(10)
+            agent.y = self.height/2-5 + np.random.randint(10)
+        elif agent.supermarket == 0:
+            agent.x, agent.y = self.random_position()
         else:
-            agent.x += ix
+            # normal movement
+            if (agent.x + ix) <= 0 or (agent.x + ix) >= self.length:
+                agent.x -= ix
+            else:
+                agent.x += ix
 
-        if (agent.y + iy) <= 0 or (agent.y + iy) >= self.height:
-            agent.y -= iy
-        else:
-            agent.y += iy
+            if (agent.y + iy) <= 0 or (agent.y + iy) >= self.height:
+                agent.y -= iy
+            else:
+                agent.y += iy
+
+        # # no supermarket and school
+        # if (agent.x + ix) <= 0 or (agent.x + ix) >= self.length:
+        #     agent.x -= ix
+        # else:
+        #     agent.x += ix
+
+        # if (agent.y + iy) <= 0 or (agent.y + iy) >= self.height:
+        #     agent.y -= iy
+        # else:
+        #     agent.y += iy
 
         dist = np.sqrt(ix ** 2 + iy ** 2)
         result_ecom = np.random.rand(1)
-        agent.wealth += dist * result_ecom * self.minimum_expense * basic_income[agent.social_stratum]
+        agent.wealth += dist * result_ecom * \
+            self.minimum_expense * basic_income[agent.social_stratum]
 
     def update(self, agent):
         """
@@ -205,6 +238,19 @@ class Simulation(object):
 
         if agent.status == Status.Death:
             return
+
+        # update the days, the agent did not go to supermarket
+        supermarket_area = range(int(self.length/2-5), int(self.length/2+6))
+        if agent.x in supermarket_area and agent.y in supermarket_area:
+            agent.supermarket = 0
+        else:
+            agent.supermarket += 1
+
+        # update the days, the agent did not go to school (only for 6-18y) -> simulates the weekend
+        if agent.age >= 6 and agent.age <= 18 and agent.school < 7:
+            agent.school += 1
+        if agent.age >= 6 and agent.age <= 18 and agent.school == 7:
+            agent.school = 0
 
         if agent.status == Status.Infected:
             agent.infected_time += 1
@@ -238,16 +284,18 @@ class Simulation(object):
                 agent.status = Status.Recovered_Immune
                 agent.infected_status = InfectionSeverity.Asymptomatic
 
-        agent.wealth -= self.minimum_expense * basic_income[agent.social_stratum]
-
+        agent.wealth -= self.minimum_expense * \
+            basic_income[agent.social_stratum]
 
     def execute(self):
         """
         Execute a complete iteration cycle of the Simulation, executing all actions for each agent
         in the population and updating the statistics
         """
-        mov_triggers = [k for k in self.triggers_population if k['attribute'] == 'move']
-        other_triggers = [k for k in self.triggers_population if k['attribute'] != 'move']
+        mov_triggers = [
+            k for k in self.triggers_population if k['attribute'] == 'move']
+        other_triggers = [
+            k for k in self.triggers_population if k['attribute'] != 'move']
 
         for agent in self.population:
             self.move(agent, triggers=mov_triggers)
@@ -256,7 +304,8 @@ class Simulation(object):
             for trigger in other_triggers:
                 if trigger['condition'](agent):
                     attr = trigger['attribute']
-                    agent.__dict__[attr] = trigger['action'](agent.__dict__[attr])
+                    agent.__dict__[attr] = trigger['action'](
+                        agent.__dict__[attr])
 
         dist = np.zeros((self.population_size, self.population_size))
 
@@ -280,7 +329,8 @@ class Simulation(object):
             for trigger in self.triggers_simulation:
                 if trigger['condition'](self):
                     attr = trigger['attribute']
-                    self.__dict__[attr] = trigger['action'](self.__dict__[attr])
+                    self.__dict__[attr] = trigger['action'](
+                        self.__dict__[attr])
 
         self.statistics = None
 
@@ -311,22 +361,24 @@ class Simulation(object):
         if self.statistics is None:
             self.statistics = {}
             for status in Status:
-                tmp = np.sum([1 for a in self.population if a.status == status])
+                tmp = np.sum(
+                    [1 for a in self.population if a.status == status])
                 if status.name == 'Infected':
                     curr_inf = tmp
                 self.statistics[status.name] = tmp / self.population_size
 
             for infected_status in filter(lambda x: x != InfectionSeverity.Exposed, InfectionSeverity):
                 if(infected_status == InfectionSeverity.Incubation):
-                    print( np.sum([1 for a in self.population if
-                                                                a.infected_status == infected_status and a.status != Status.Death]) )
+                    print(np.sum([1 for a in self.population if
+                                  a.infected_status == infected_status and a.status != Status.Death]))
                 self.statistics[infected_status.name] = np.sum([1 for a in self.population if
                                                                 a.infected_status == infected_status and a.status != Status.Death]) / self.population_size
 
             print('curr_inf ', curr_inf)
             print('inf this day ', self.inf_new_day)
             if curr_inf != 0:
-                self.statistics['R'] = self.inf_new_day / (curr_inf-self.inf_new_day)
+                self.statistics['R'] = self.inf_new_day / \
+                    (curr_inf-self.inf_new_day)
             else:
                 self.statistics['R'] = 0
             for quintile in [0, 1, 2, 3, 4]:
@@ -339,7 +391,7 @@ class Simulation(object):
     def filter_stats(self, kind):
         if kind == 'info':
             return {k: v for k, v in self.statistics.items() if
-                    not k.startswith('Q') and k != 'R'  and k not in ('Business', 'Government')}
+                    not k.startswith('Q') and k != 'R' and k not in ('Business', 'Government')}
         elif kind == 'ecom':
             return {k: v for k, v in self.statistics.items() if k.startswith('Q') or k in ('Business', 'Government')}
         elif kind == 'R':
@@ -388,7 +440,7 @@ class MultiPopulationSimulation(Simulation):
 
                         if np.sqrt(((ai.x + self.positions[m][0]) - (aj.x + self.positions[n][0])) ** 2 +
                                    ((ai.y + self.positions[m][1]) - (
-                                           aj.y + self.positions[n][1])) ** 2) <= self.contagion_distance:
+                                       aj.y + self.positions[n][1])) ** 2) <= self.contagion_distance:
                             self.simulations[m].contact(ai, aj)
                             self.simulations[n].contact(aj, ai)
         self.statistics = None
@@ -397,7 +449,8 @@ class MultiPopulationSimulation(Simulation):
         positions = []
         for ct, simulation in enumerate(self.simulations):
             for a in simulation.get_population():
-                positions.append([a.x + self.positions[ct][0], a.y + self.positions[ct][1]])
+                positions.append([a.x + self.positions[ct][0],
+                                  a.y + self.positions[ct][1]])
         return positions
 
     def get_description(self, complete=False):

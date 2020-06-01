@@ -4,6 +4,7 @@ Base codes for Agent and its internal state
 
 from enum import Enum
 import uuid
+import numpy as np
 
 
 class Status(Enum):
@@ -42,6 +43,7 @@ class Agent(object):
     """
     The container of Agent's attributes and status
     """
+
     def __init__(self, **kwargs):
         self.id = kwargs.get('id', int(uuid.uuid4()))
         self.x = kwargs.get('x', 0)
@@ -66,6 +68,12 @@ class Agent(object):
 
         self.x_infected = 0
         """The ampunt of agents this agent infected"""
+
+        """The time (in days) since the last supermarket visit"""
+        self.supermarket = kwargs.get('supermarket', np.random.randint(
+            7))  # initialized with a random nnumber between 0 and 6
+        """The time (in consecutive days) that a (young) agent went to school (for simulating the weekend)"""
+        self.school = kwargs.get('school', 0)
 
     def get_description(self):
         """
